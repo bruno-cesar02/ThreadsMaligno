@@ -1,13 +1,10 @@
-import java.util.Vector;
-
 public class Misturadora extends Thread
 {
-    private Vector<Byte> a;
-    private Vector<Byte> b;
-    private Vector<Byte> resultado;
+    private byte[] a;
+    private byte[] b;
+    private byte[] resultado;
 
-    public Misturadora(Vector<Byte> a, Vector<Byte> b)
-        throws Exception
+    public Misturadora(byte[] a, byte[] b) throws Exception
     {
         if (a == null || b == null)
             throw new Exception("Vetores de entrada ausentes");
@@ -23,46 +20,51 @@ public class Misturadora extends Thread
     }
 
     // chamar esse metodo depois do join
-    public Vector<Byte> getResultado()
+    public byte[] getResultado()
     {
         return this.resultado;
     }
 
    
-    public static Vector<Byte> merge(Vector<Byte> a, Vector<Byte> b)
+    public static byte[] merge(byte[] a, byte[] b)
     {
-        Vector<Byte> resultado = new Vector<Byte>();
+        byte[] resultado = new byte[a.length + b.length];
 
         int i = 0;
         int j = 0;
+        int k = 0;
 
-        
-        while (i < a.size() && j < b.size())
+        // Compara enquanto os dois vetores possuem elementos.
+        while (i < a.length && j < b.length)
         {
-            if (a.get(i) <= b.get(j))
+            if (a[i] <= b[j])
             {
-                resultado.add(a.get(i));
+                resultado[k] = a[i];
                 i++;
             }
             else
             {
-                resultado.add(b.get(j));
+                resultado[k] = b[j];
                 j++;
             }
+
+            k++;
         }
 
-        // Copia o q sobrou de A.
-        while (i < a.size())
+        // Copia os elementos que sobrou de A.
+        while (i < a.length)
         {
-            resultado.add(a.get(i));
+            resultado[k] = a[i];
             i++;
+            k++;
         }
 
-        // Copia o q sobrou de B.
-        while (j < b.size())
+        // Copia os elementos que sobrou de B.
+        while (j < b.length)
         {
-            resultado.add(b.get(j));
+            resultado[k] = b[j];
             j++;
+            k++;
         }
 
         return resultado;
