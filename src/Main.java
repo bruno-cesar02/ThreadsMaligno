@@ -1,16 +1,18 @@
+import java.util.concurrent.Semaphore;
 import java.util.Random;
-import java.io.EOFException;
 
 public class Main {
-    public static void printarParteDoVetor(int inicio, int fim, byte[] vetor) throws Exception {
-        if (inicio < 1 || fim < inicio || fim > vetor.length) {
+    public static void printarParteDoVetor (int inicio , int fim, byte[] vetor) throws Exception{
+        if (inicio < 1 || fim < inicio || fim > vetor.length){
             throw new Exception("Anta, o segundo tem que ser maior que o primeiro");
         }
         System.out.print("[");
-        for (int i = inicio - 1; i < fim; i++) {
+        for(int i = inicio - 1; i < fim; i++ ){
             System.out.print(vetor[i]);
-            if (i < fim - 1)
+
+            if (i < fim - 1) {
                 System.out.print(", ");
+            }
         }
         System.out.println("]");
     }
@@ -28,43 +30,61 @@ public class Main {
         byte[] metade_direita;
 
         while (trocar_vetor) {
-            int tamanho = lerTamanho();
-            byte[] vetor = new byte[tamanho];
-            char resposta = lerResposta();
-            Random gerador = new Random(semente);
-
-            if (resposta == 's') {
-                for (int i = 0; i < tamanho; i++)
-                    vetor[i] = (byte) (gerador.nextInt(256) - 128);
-                System.out.println("Vetor de bytes aleatórios montado");
-                System.out.println("[LOG] Semente: " + semente + "; elementos: " + tamanho);
-            } else {
-                for (int i = 0; i < tamanho; i++)
-                    vetor[i] = lerByte("Insira o " + (i + 1) + "º numero:",
-                                     "erro deve colocar uma numero que caiba em um byte");
+            System.out.println("Quantos numeros deseja adicionar ao vetor");
+            try {
+                tamanho_do_vetor = Teclado.getUmInt();
+            } catch (Exception e) {
+                System.err.println("Erro ao ler buffer: " + e);
             }
 
-            int processadores = Runtime.getRuntime().availableProcessors();
-            System.out.println("\n--- ORDENACAO PARALELA ---");
-            System.out.println("[LOG] Processadores disponiveis: " + processadores);
-            if (processadores < 2)
-                System.out.println("[LOG] Apenas um processador: sera usada uma tarefa, sem paralelismo real garantido.");
-            long inicio = System.nanoTime();
-            vetor = ordenarParalelo(vetor, processadores);
-            long tempo = System.nanoTime() - inicio;
-            System.out.println("[LOG] Concluido: " + vetor.length + " elementos ordenados.");
-            mostrarTempo(tempo);
+            vetor = new byte[tamanho_do_vetor];
+
+            System.out.println("Deseja adicionar os valores automaticamente?(s/N)");
+            try {
+                resposta = Teclado.getUmChar();
+                resposta = Character.toLowerCase(resposta);
+            } catch (Exception e) {
+                System.err.println("erro ao pegar a resposta");
+            }
+            if (resposta != 's') {
+                try {
+                    for (int i = 0; i < tamanho_do_vetor; i++) {
+                        System.out.println("Insira o " + (i + 1) + "º numero:");
+                        vetor[i] = Teclado.getUmByte();
+
+                    }
+                } catch (Exception e) {
+                    System.err.println("erro deve colocar uma numero que caiba em um byte");
+                }
+
+            } else {
+                for (int i = 0; i < tamanho_do_vetor; i++) {
+                    vetor[i] = (byte) (gerador.nextInt(256) - 128);
+                }
+                System.out.println("Vetor de bytes aleatórios montado");
+            }
+
+            metade_esquerda = new byte[vetor.length/2];
+            metade_direita = new byte[vetor.length/2];
+
+            for (int a = 0 ; a < vetor.length/2 ; a++){
+                metade_esquerda[a] = vetor[a];
+                metade_direita[a] = vetor[(vetor.length/2)+a];
+            }
 
             boolean manter_vetor = true;
             while (manter_vetor) {
                 System.out.println("O que deseja fazer agora? (1-BOrganizar sem paralelismo/2-Organizar com paralelismo/3-Mostar um pedaço do vetor/4-Montar outro vetor/5-Sair ");
 
+                byte opcao;
+                try {
+                    opcao = Teclado.getUmByte();
+                } catch (Exception e) {
+                    System.err.println("A entrada PRECISA SER UM BYTE O ANTA DO CARALHO");
+                    return;
+                }
                 switch (opcao) {
-                    case 1:
-                        printarParteDoVetor(1, vetor.length, vetor);
-                        break;
-                    case 2:
-                        System.out.println("Posicoes de 1 a " + vetor.length + ", incluindo os dois limites.");
+                    case ((byte) (1)):
                         try {
                             ordenadora = new Ordenadora[1];
                             ordenadora[0] = new Ordenadora(vetor);
@@ -75,7 +95,7 @@ public class Main {
                             vetor = ordenadora[0].getResultado();
 
                         } catch (Exception e) {
-                            System.out.println("Tem que ser dois INT POSITIVOS SEU ANIMAL:" + e.getMessage());
+                            System.err.println(e);
                         }
                         break;
                     case ((byte) (2)):
@@ -144,135 +164,21 @@ public class Main {
                             System.err.println("Tem que ser dois INT POSITIVOS SEU ANIMAL:" + e);
                         }
                         break;
-                    case 4:
+
+                    case ((byte) (4)):
                         manter_vetor = false;
                         break;
-                    case 0:
+
+                    case ((byte) (5)):
                         manter_vetor = false;
                         trocar_vetor = false;
-                        System.out.println("Programa encerrado.");
                         break;
+
                     default:
-                        System.out.println("POHA ANTA OS NUMEROS ESTÃO ESCRITOS E VOCÊ ERRA, BURRO");
+                        System.err.println("POHA ANTA OS NUMEROS ESTÃO ESCRITOS E VOCÊ ERRA, BURRO");
+                        break;
                 }
             }
         }
-    }
-
-    public static byte[] ordenarParalelo(byte[] vetor, int processadores) throws Exception {
-        if (vetor == null || vetor.length == 0 || processadores < 1)
-            throw new IllegalArgumentException("Vetor vazio ou processadores invalidos");
-
-        int quantidade = processadores - 1;
-        if (quantidade < 1)
-            quantidade = 1;
-        System.out.println("[LOG] Criando " + quantidade + " ordenadoras.");
-
-        int base = vetor.length / quantidade;
-        int sobra = vetor.length % quantidade;
-        int posicao = 0;
-        Ordenadora[] ordenadoras = new Ordenadora[quantidade];
-
-        for (int i = 0; i < quantidade; i++) {
-            int tamanho = base;
-            if (i < sobra)
-                tamanho++;
-            byte[] pedaco = new byte[tamanho];
-            for (int j = 0; j < tamanho; j++)
-                pedaco[j] = vetor[posicao++];
-            ordenadoras[i] = new Ordenadora(pedaco);
-            ordenadoras[i].setName("Ordenadora-" + (i + 1));
-        }
-
-        // Inicia todas ANTES de esperar qualquer uma.
-        for (int i = 0; i < quantidade; i++)
-            ordenadoras[i].start();
-        for (int i = 0; i < quantidade; i++)
-            ordenadoras[i].join();
-
-        byte[][] pedacos = new byte[quantidade][];
-        for (int i = 0; i < quantidade; i++)
-            pedacos[i] = ordenadoras[i].getResultado();
-        // As tarefas encerradas nao precisam manter os pedacos antigos vivos.
-        ordenadoras = null;
-
-        int rodada = 1;
-        while (pedacos.length > 1) {
-            int pares = pedacos.length / 2;
-            int semPar = pedacos.length % 2;
-            System.out.println("[LOG] Rodada " + rodada + ": " + pares
-                               + " misturadoras; " + semPar + " pedaco sem par.");
-            Misturadora[] misturadoras = new Misturadora[pares];
-            byte[][] proximos = new byte[pares + semPar][];
-
-            for (int i = 0; i < pares; i++) {
-                misturadoras[i] = new Misturadora(pedacos[2 * i], pedacos[2 * i + 1]);
-                misturadoras[i].setName("Misturadora-R" + rodada + "-" + (i + 1));
-            }
-            if (semPar == 1)
-                proximos[pares] = pedacos[pedacos.length - 1];
-
-            for (int i = 0; i < pares; i++)
-                misturadoras[i].start();
-            for (int i = 0; i < pares; i++)
-                misturadoras[i].join();
-            for (int i = 0; i < pares; i++)
-                proximos[i] = misturadoras[i].getResultado();
-
-            pedacos = proximos;
-            rodada++;
-        }
-        return pedacos[0];
-    }
-
-    private static String lerLinha() throws EOFException {
-        String linha = Teclado.getUmString();
-        if (linha == null)
-            throw new EOFException("Entrada encerrada");
-        return linha;
-    }
-
-    private static int lerTamanho() throws EOFException {
-        while (true) {
-            System.out.println("Quantos numeros deseja adicionar ao vetor");
-            String linha = lerLinha();
-            try {
-                int tamanho = Integer.parseInt(linha.trim());
-                if (tamanho > 0)
-                    return tamanho;
-                System.out.println("O tamanho deve ser maior que zero.");
-            } catch (NumberFormatException e) {
-                System.out.println("Erro ao ler buffer: " + e.getMessage());
-            }
-        }
-    }
-
-    private static char lerResposta() throws EOFException {
-        while (true) {
-            System.out.println("Gerar valores aleatorios? [s = sim / n ou ENTER = digitar]");
-            String linha = lerLinha().trim();
-            if (linha.isEmpty() || linha.equalsIgnoreCase("n"))
-                return 'n';
-            if (linha.equalsIgnoreCase("s"))
-                return 's';
-            System.out.println("erro ao pegar a resposta");
-        }
-    }
-
-    private static byte lerByte(String pergunta, String erro) throws EOFException {
-        while (true) {
-            System.out.println(pergunta);
-            String linha = lerLinha();
-            try {
-                return Byte.parseByte(linha.trim());
-            } catch (NumberFormatException e) {
-                System.out.println(erro);
-            }
-        }
-    }
-
-    private static void mostrarTempo(long tempo) {
-        System.out.printf("Tempo total de ordenacao paralela: %.3f ms (%.6f s)%n",
-                          tempo / 1000000.0, tempo / 1000000000.0);
     }
 }
