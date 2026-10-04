@@ -95,8 +95,25 @@ public class Main {
                         }
                         break;
                     case ((byte) (2)):
-                        // aqui coloca o algoritmo de merge sort
-                        break;
+                        try {
+                            Ordenadora ordenadora = new Ordenadora(vetor);
+
+                            ordenadora.start();
+                            ordenadora.join();
+
+        // Atualiza o vetor da main com o resultado ordenado.
+                            vetor = ordenadora.getResultado();
+
+                            printarParteDoVetor(1, vetor.length, vetor);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            System.err.println("Ordenação interrompida.");
+                            return;
+    } catch (Exception e) {
+        System.err.println("Erro ao ordenar: " + e.getMessage());
+    }
+    break;
+                        
                     case ((byte) (3)):
                         System.out.println("Entre dois valores, de onde começa a onde termina de buscar");
                         try {
