@@ -17,15 +17,15 @@ public class Main {
         System.out.println("]");
     }
 
-
     public static void main(String[] args) {
-        Semaphore thread_disponiveis = new Semaphore(Runtime.getRuntime().availableProcessors() - 1, true);
+        int thread_disponiveis = (Runtime.getRuntime().availableProcessors() - 1 );
         byte[] vetor;
+        byte[] vetor_ordenado = null;
         int tamanho_do_vetor = 0;
         char resposta = 'N' ;
         Random gerador = new Random();
         boolean trocar_vetor = true;
-        Misturadora misturadora;
+        Ordenadora[] ordenadora;
         byte[] metade_esquerda;
         byte[] metade_direita;
 
@@ -74,7 +74,7 @@ public class Main {
 
             boolean manter_vetor = true;
             while (manter_vetor) {
-                System.out.println("O que deseja fazer agora? (1-Bagunçar/2-Organizar/3-Mostar um pedaço do vetor/4-Montar outro vetor/5-Sair ");
+                System.out.println("O que deseja fazer agora? (1-BOrganizar sem paralelismo/2-Organizar com paralelismo/3-Mostar um pedaço do vetor/4-Montar outro vetor/5-Sair ");
 
                 byte opcao;
                 try {
@@ -86,40 +86,80 @@ public class Main {
                 switch (opcao) {
                     case ((byte) (1)):
                         try {
-                            misturadora = new Misturadora(metade_esquerda, metade_direita);
-                            misturadora.start();
-                            misturadora.join();
-                            vetor = misturadora.getResultado();
+                            ordenadora = new Ordenadora[1];
+                            ordenadora[0] = new Ordenadora(vetor);
+
+                            ordenadora[0].start();
+                            ordenadora[0].join();
+
+                            vetor = ordenadora[0].getResultado();
+
                         } catch (Exception e) {
                             System.err.println(e);
                         }
                         break;
                     case ((byte) (2)):
                         try {
-                            Ordenadora ordenadora = new Ordenadora(vetor);
+                            ordenadora = new Ordenadora[thread_disponiveis];
 
-                            ordenadora.start();
-                            ordenadora.join();
+                            byte[][] paretes_vetor = new byte[thread_disponiveis][];
+                            int tamanhoBase = vetor.length / thread_disponiveis;
+                            int resto = vetor.length % thread_disponiveis;
 
-        // Atualiza o vetor da main com o resultado ordenado.
-                            vetor = ordenadora.getResultado();
+                            int posicaoAtual = 0;
 
-                            printarParteDoVetor(1, vetor.length, vetor);
+                            for (int i = 0; i < thread_disponiveis; i++) {
+
+                                int tamanhoDestePedaco = tamanhoBase;
+                                if (i == thread_disponiveis - 1) {
+                                    tamanhoDestePedaco += resto;
+                                }
+
+                                byte[] pedacoRecortado = new byte[tamanhoDestePedaco];
+
+                                System.arraycopy(vetor, posicaoAtual, pedacoRecortado, 0, tamanhoDestePedaco);
+
+                                paretes_vetor[i] = pedacoRecortado;
+
+                                posicaoAtual += tamanhoDestePedaco;
+                            }
+                            for (int i = 0 ; i < thread_disponiveis ; i++){
+                                ordenadora[i] = new Ordenadora(paretes_vetor[i]);
+
+                                ordenadora[i].start();
+                            }
+                            for (int i = 0 ; i < thread_disponiveis ; i++){ ordenadora[i].join(); }
+
+                            vetor_ordenado = new byte[tamanho_do_vetor];
+                            int posicaoMerge = 0;
+
+                            for (int i = 0; i < thread_disponiveis; i++) {
+                                byte[] pedacoPronto = ordenadora[i].getResultado();
+
+                                System.arraycopy(pedacoPronto, 0, vetor_ordenado, posicaoMerge, pedacoPronto.length);
+
+                                posicaoMerge += pedacoPronto.length;
+                            }
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             System.err.println("Ordenação interrompida.");
                             return;
-    } catch (Exception e) {
-        System.err.println("Erro ao ordenar: " + e.getMessage());
-    }
-    break;
+                        } catch (Exception e) {
+                            System.err.println("Erro ao ordenar: " + e.getMessage());
+                        }
+                        break;
                         
                     case ((byte) (3)):
                         System.out.println("Entre dois valores, de onde começa a onde termina de buscar");
                         try {
                             int inicio = Teclado.getUmInt();
                             int fim = Teclado.getUmInt();
-                            printarParteDoVetor(inicio,fim, vetor);
+                            if (vetor_ordenado == null) {
+                                printarParteDoVetor(inicio, fim, vetor);
+                            }
+                            else {
+                                printarParteDoVetor(inicio,fim,vetor_ordenado);
+                            }
                         } catch (Exception e){
                             System.err.println("Tem que ser dois INT POSITIVOS SEU ANIMAL:" + e);
                         }
