@@ -22,6 +22,8 @@ public class Misturadora extends Thread
     // chamar esse metodo depois do join
     public byte[] getResultado()
     {
+        if (getState() != Thread.State.TERMINATED || this.resultado == null)
+            throw new IllegalStateException("Misturadora terminou sem resultado disponivel");
         return this.resultado;
     }
 

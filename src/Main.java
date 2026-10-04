@@ -30,6 +30,8 @@ public class Main {
         byte[] metade_direita;
 
         while (trocar_vetor) {
+            double tempoSemParalelismo = -1;
+            double tempoComParalelismo = -1;
             System.out.println("Quantos numeros deseja adicionar ao vetor");
             try {
                 tamanho_do_vetor = Teclado.getUmInt();
@@ -74,7 +76,14 @@ public class Main {
 
             boolean manter_vetor = true;
             while (manter_vetor) {
-                System.out.println("O que deseja fazer agora? (1-BOrganizar sem paralelismo/2-Organizar com paralelismo/3-Mostar um pedaço do vetor/4-Montar outro vetor/5-Sair ");
+                System.out.println("\nO que deseja fazer agora?");
+                System.out.println("1 - Organizar sem paralelismo");
+                System.out.println("2 - Organizar com paralelismo");
+                System.out.println("3 - Mostrar um pedaço do vetor");
+                System.out.println("4 - Montar outro vetor");
+                System.out.println("5 - Sair");
+                System.out.println("6 - Mostrar tempos");
+                System.out.print("Escolha uma opção: ");
 
                 byte opcao;
                 try {
@@ -86,6 +95,7 @@ public class Main {
                 switch (opcao) {
                     case ((byte) (1)):
                         try {
+                            long inicioTempo = System.nanoTime();
                             ordenadora = new Ordenadora[1];
                             ordenadora[0] = new Ordenadora(vetor);
 
@@ -93,6 +103,7 @@ public class Main {
                             ordenadora[0].join();
 
                             vetor = ordenadora[0].getResultado();
+                            tempoSemParalelismo = (System.nanoTime() - inicioTempo) / 1_000_000.0;
 
                         } catch (Exception e) {
                             System.err.println(e);
@@ -100,6 +111,7 @@ public class Main {
                         break;
                     case ((byte) (2)):
                         try {
+                            long inicioTempo = System.nanoTime();
                             ordenadora = new Ordenadora[thread_disponiveis];
 
                             byte[][] paretes_vetor = new byte[thread_disponiveis][];
@@ -140,6 +152,7 @@ public class Main {
 
                                 posicaoMerge += pedacoPronto.length;
                             }
+                            tempoComParalelismo = (System.nanoTime() - inicioTempo) / 1_000_000.0;
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             System.err.println("Ordenação interrompida.");
@@ -174,6 +187,17 @@ public class Main {
                         trocar_vetor = false;
                         break;
 
+                    case ((byte) (6)):
+                        if (tempoSemParalelismo < 0)
+                            System.out.println("A opcao 1 ainda nao foi executada neste vetor.");
+                        else
+                            System.out.printf("Tempo da opcao 1: %.3f ms%n", tempoSemParalelismo);
+
+                        if (tempoComParalelismo < 0)
+                            System.out.println("A opcao 2 ainda nao foi executada neste vetor.");
+                        else
+                            System.out.printf("Tempo da opcao 2: %.3f ms%n", tempoComParalelismo);
+                        break;
                     default:
                         System.err.println("POHA ANTA OS NUMEROS ESTÃO ESCRITOS E VOCÊ ERRA, BURRO");
                         break;

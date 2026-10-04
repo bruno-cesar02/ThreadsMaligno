@@ -29,7 +29,7 @@ public class Ordenadora extends Thread
         return Arrays.copyOf(this.resultado, this.resultado.length);
     }
 
-    private byte[] mergeSort(byte[] vetor)
+    public byte[] mergeSort(byte[] vetor)
     {
         // Caso-base: zero ou um elemento já está ordenado.
         if (vetor.length <= 1)
@@ -45,49 +45,7 @@ public class Ordenadora extends Thread
         esquerda = mergeSort(esquerda);
         direita = mergeSort(direita);
 
-        return intercalar(esquerda, direita);
+        return Misturadora.merge(esquerda, direita);
     }
 
-    private byte[] intercalar(byte[] esquerda, byte[] direita)
-    {
-        byte[] unido = new byte[esquerda.length + direita.length];
-
-        int i = 0; // Posição na esquerda.
-        int j = 0; // Posição na direita.
-        int k = 0; // Posição no resultado.
-
-        while (i < esquerda.length && j < direita.length)
-        {
-            if (esquerda[i] <= direita[j])
-            {
-                unido[k] = esquerda[i];
-                i++;
-            }
-            else
-            {
-                unido[k] = direita[j];
-                j++;
-            }
-
-            k++;
-        }
-
-        // Copia o que restou da esquerda.
-        while (i < esquerda.length)
-        {
-            unido[k] = esquerda[i];
-            i++;
-            k++;
-        }
-
-        // Copia o que restou da direita.
-        while (j < direita.length)
-        {
-            unido[k] = direita[j];
-            j++;
-            k++;
-        }
-
-        return unido;
-    }
 }
