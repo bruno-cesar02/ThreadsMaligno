@@ -1,4 +1,3 @@
-import java.util.concurrent.Semaphore;
 import java.util.Random;
 
 public class Main {
@@ -18,7 +17,8 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        int thread_disponiveis = (Runtime.getRuntime().availableProcessors() - 1 );
+        // Com apenas um processador, usa uma tarefa para evitar divisao por zero.
+        int thread_disponiveis = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
         byte[] vetor;
         byte[] vetor_ordenado = null;
         int tamanho_do_vetor = 0;
@@ -26,10 +26,9 @@ public class Main {
         Random gerador = new Random();
         boolean trocar_vetor = true;
         Ordenadora[] ordenadora;
-        byte[] metade_esquerda;
-        byte[] metade_direita;
 
         while (trocar_vetor) {
+            vetor_ordenado = null;
             double tempoSemParalelismo = -1;
             double tempoComParalelismo = -1;
             System.out.println("Quantos numeros deseja adicionar ao vetor");
@@ -66,14 +65,6 @@ public class Main {
                 System.out.println("Vetor de bytes aleatórios montado");
             }
 
-            metade_esquerda = new byte[vetor.length/2];
-            metade_direita = new byte[vetor.length/2];
-
-            for (int a = 0 ; a < vetor.length/2 ; a++){
-                metade_esquerda[a] = vetor[a];
-                metade_direita[a] = vetor[(vetor.length/2)+a];
-            }
-
             boolean manter_vetor = true;
             while (manter_vetor) {
                 System.out.println("\nO que deseja fazer agora?");
@@ -102,7 +93,8 @@ public class Main {
                             ordenadora[0].start();
                             ordenadora[0].join();
 
-                            vetor = ordenadora[0].getResultado();
+                            // Preserva a entrada original para comparar as duas opcoes.
+                            vetor_ordenado = ordenadora[0].getResultado();
                             tempoSemParalelismo = (System.nanoTime() - inicioTempo) / 1_000_000.0;
 
                         } catch (Exception e) {
@@ -123,8 +115,8 @@ public class Main {
                             for (int i = 0; i < thread_disponiveis; i++) {
 
                                 int tamanhoDestePedaco = tamanhoBase;
-                                if (i == thread_disponiveis - 1) {
-                                    tamanhoDestePedaco += resto;
+                                if (i < resto) {
+                                    tamanhoDestePedaco++;
                                 }
 
                                 byte[] pedacoRecortado = new byte[tamanhoDestePedaco];
@@ -142,16 +134,41 @@ public class Main {
                             }
                             for (int i = 0 ; i < thread_disponiveis ; i++){ ordenadora[i].join(); }
 
-                            vetor_ordenado = new byte[tamanho_do_vetor];
-                            int posicaoMerge = 0;
-
+                            byte[][] pedacosOrdenados = new byte[thread_disponiveis][];
                             for (int i = 0; i < thread_disponiveis; i++) {
-                                byte[] pedacoPronto = ordenadora[i].getResultado();
-
-                                System.arraycopy(pedacoPronto, 0, vetor_ordenado, posicaoMerge, pedacoPronto.length);
-
-                                posicaoMerge += pedacoPronto.length;
+                                pedacosOrdenados[i] = ordenadora[i].getResultado();
                             }
+
+                            // Intercala os pedacos aos pares ate restar o vetor completo.
+                            while (pedacosOrdenados.length > 1) {
+                                int quantidadePares = pedacosOrdenados.length / 2;
+                                int sobra = pedacosOrdenados.length % 2;
+                                Misturadora[] misturadoras = new Misturadora[quantidadePares];
+
+                                for (int i = 0; i < quantidadePares; i++) {
+                                    misturadoras[i] = new Misturadora(
+                                            pedacosOrdenados[2 * i],
+                                            pedacosOrdenados[2 * i + 1]);
+                                }
+                                for (int i = 0; i < quantidadePares; i++) {
+                                    misturadoras[i].start();
+                                }
+                                for (int i = 0; i < quantidadePares; i++) {
+                                    misturadoras[i].join();
+                                }
+
+                                byte[][] proximaRodada = new byte[quantidadePares + sobra][];
+                                for (int i = 0; i < quantidadePares; i++) {
+                                    proximaRodada[i] = misturadoras[i].getResultado();
+                                }
+                                if (sobra == 1) {
+                                    // O ultimo pedaco sem par segue intacto.
+                                    proximaRodada[quantidadePares] =
+                                            pedacosOrdenados[pedacosOrdenados.length - 1];
+                                }
+                                pedacosOrdenados = proximaRodada;
+                            }
+                            vetor_ordenado = pedacosOrdenados[0];
                             tempoComParalelismo = (System.nanoTime() - inicioTempo) / 1_000_000.0;
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
